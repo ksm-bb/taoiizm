@@ -230,9 +230,6 @@
       </div>
     ));
 
-    // ==========================================
-    // 🃏 COMPONENT: TaskCard (คิวงาน + นาฬิกา)
-    // ==========================================
     const TaskCard = React.memo(({ task, isAdmin, onEdit, onToggleDoing, onToggleStatus, onUpdateDuration }) => {
       
       const channelColor = task.channel === 'LINE' ? '#D5EDB5' : task.channel === 'FB' || task.channel === 'FACEBOOK' ? '#C0D5E9' : task.channel === 'IG' ? '#FFD3DE' : COLORS.purpleDeep;
@@ -244,16 +241,20 @@
       
       const isFortune = task.type === 'ดูดวงแบบโทรคุย';
 
-      // คำนวณเวลา (วินาที)
-      const initSecs = Math.round((parseFloat(task.duration) || 15) * 60);
+      // ✨ คอนเซปต์ใหม่: แยก Max Time (ตั้งต้น) และ Time Left (เวลาที่เหลือ)
+      const durationMins = parseFloat(task.duration) || 15;
+      const remainingMins = task.remainingTime !== undefined && task.remainingTime !== '' ? parseFloat(task.remainingTime) : durationMins;
+
+      const initSecs = Math.round(remainingMins * 60);
+      const maxSecs = Math.round(durationMins * 60);
+
       const [timeLeft, setTimeLeft] = useState(initSecs);
-      const [maxTime, setMaxTime] = useState(initSecs);
+      const [maxTime, setMaxTime] = useState(maxSecs);
       const [isRunning, setIsRunning] = useState(false);
       
       const [showAddModal, setShowAddModal] = useState(false);
       const [addMinsInput, setAddMinsInput] = useState('');
 
-      // Effect: นับเวลาถอยหลัง และหยุดเมื่อเหลือ 0 (พร้อมบันทึกอัตโนมัติ)
       useEffect(() => {
         let interval = null;
         if (isRunning && timeLeft > 0) {
@@ -261,39 +262,37 @@
         } else if (isRunning && timeLeft <= 0) {
           setIsRunning(false);
           clearInterval(interval);
-          onUpdateDuration(task.id, 0); // บันทึก 0 นาทีลงฐานข้อมูล
+          onUpdateDuration(task.id, 0); // หมดเวลา = เหลือ 0
         }
         return () => clearInterval(interval);
       }, [isRunning, timeLeft, task.id, onUpdateDuration]);
 
-      // Effect: หยุดเวลาอัตโนมัติถ้าถูกเปลี่ยนสถานะเป็น ไม่ได้กำลังทำ
       useEffect(() => {
         if (task.status !== 'doing' && isRunning) {
           setIsRunning(false);
-          onUpdateDuration(task.id, timeLeft / 60); // บันทึกจุดพัก
+          onUpdateDuration(task.id, timeLeft / 60); // กดเปลี่ยนสถานะ = หยุดและเซฟ
         }
       }, [task.status]);
 
-      // ฟังก์ชันปุ่ม Play / Pause (จุดเซฟ)
       const handleToggleTimer = (e) => {
         e.stopPropagation();
         if (timeLeft > 0) {
           if (isRunning) {
             setIsRunning(false);
-            onUpdateDuration(task.id, timeLeft / 60); // Pause -> เซฟเวลา!
+            onUpdateDuration(task.id, timeLeft / 60); // Pause = เซฟเวลาที่เหลือ
           } else {
             setIsRunning(true);
           }
         }
       };
 
-      // ฟังก์ชันปุ่ม Reset
+      // ✨ ปุ่มรีเซ็ต: ดึงเวลาให้กลับไปเท่ากับ maxTime (เวลาตั้งต้น)
       const handleResetTimer = (e) => {
         e.stopPropagation();
         setIsRunning(false);
-        setTimeLeft(initSecs);
-        setMaxTime(initSecs);
-        onUpdateDuration(task.id, initSecs / 60); // เซฟเวลาเริ่มต้น
+        setTimeLeft(maxTime);
+        // สั่งให้ฐานข้อมูลอัปเดตเวลาที่เหลือให้กลับมาเท่ากับเวลาตั้งต้น
+        onUpdateDuration(task.id, maxTime / 60, maxTime / 60); 
       };
 
       const handleOpenAddModal = (e) => {
@@ -301,16 +300,17 @@
         setShowAddModal(true);
       };
 
-      // ฟังก์ชันปุ่ม ตกลง เพิ่มเวลา
+      // ✨ ปุ่มเพิ่มเวลา: บวกเวลาทั้งในหลอด (Remaining) และเวลาเต็ม (Max)
       const confirmAddCustomTime = (e) => {
         e.stopPropagation();
         const mins = parseInt(addMinsInput, 10);
         if (!isNaN(mins) && mins > 0) {
           const addedSecs = mins * 60;
+          const newMax = maxTime + addedSecs;
           const newTime = timeLeft + addedSecs;
-          setMaxTime(prev => Math.max(prev, newTime));
+          setMaxTime(newMax);
           setTimeLeft(newTime);
-          onUpdateDuration(task.id, newTime / 60); // เซฟเวลาที่บวกเพิ่ม
+          onUpdateDuration(task.id, newTime / 60, newMax / 60); // เซฟค่าใหม่ลง DB
         }
         setShowAddModal(false);
         setAddMinsInput('');
@@ -321,7 +321,7 @@
       const circumference = 251.2;
       const strokeOffset = circumference - (timeLeft / maxTime) * circumference;
       
-      const isWarning = timeLeft > 0 && timeLeft <= 60; // เหลือน้อยกว่า 1 นาทีเป็นสีส้ม
+      const isWarning = timeLeft > 0 && timeLeft <= 60; 
       const isDanger = timeLeft === 0;
       const timerColor1 = isDanger ? "#ef4444" : isWarning ? "#f97316" : "#9673D2";
       const timerColor2 = isDanger ? "#b91c1c" : isWarning ? "#ea580c" : "#7D45C6";
@@ -612,9 +612,10 @@
       const [selectedNextDate, setSelectedNextDate] = useState(''); 
       const [isBouncing, setIsBouncing] = useState(false); 
 
-
       // ==========================================
-      const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwk6HT1o8M8F3i35-4gKverI4Kt1zAfncKnmgrJd7jX6fCNhKG3ww_GkICOXMtuCCQR/exec";
+      // 🌐 URL (เปลี่ยนตรงนี้!)
+      // ==========================================
+      const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw2HdyevotVH-Raq2bLJjKFI9blissQG6KvJdm4nBXYr5mfG-MNS3Xc-rAPaSuFijSC/exec";
 
       const fetchAPI = async (payload) => {
         try {
@@ -720,10 +721,25 @@
         }));
       }, []);
 
-      // 🆕 ฟังก์ชันรับค่าจาก TaskCard เพื่อยิง API อัปเดตเวลาลง DB
-      const updateTaskDuration = useCallback((id, newDuration) => {
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, duration: newDuration } : t));
-        fetchAPI({ action: 'updateTaskTimer', taskId: id, newDuration: newDuration });
+      // ✨ ฟังก์ชันรับค่าเวลาทั้ง 2 ก้อน
+      const updateTaskDuration = useCallback((id, newRemainingTime, newMaxTime) => {
+        setTasks(prev => prev.map(t => {
+          if (t.id === id) {
+             return { 
+                ...t, 
+                remainingTime: newRemainingTime,
+                ...(newMaxTime !== undefined ? { duration: newMaxTime } : {})
+             };
+          }
+          return t;
+        }));
+        
+        fetchAPI({ 
+          action: 'updateTaskTimer', 
+          taskId: id, 
+          newRemainingTime: newRemainingTime,
+          newMaxTime: newMaxTime
+        });
       }, []);
 
       const handleEditTask = useCallback((task) => {
@@ -736,6 +752,15 @@
         e.preventDefault();
         setIsSaving(true);
         const formData = new FormData(e.target);
+        
+        if (formData.get('type') === 'ดูดวงแบบโทรคุย' && !formData.get('duration')) {
+           alert("⚠️ กรุณาเลือกเวลา (10, 15, 30, 60 นาที)");
+           setIsSaving(false);
+           return;
+        }
+
+        const durationVal = formData.get('type') === 'ดูดวงแบบโทรคุย' ? parseFloat(formData.get('duration')) : null;
+
         const taskData = {
           id: editingTask ? editingTask.id : null,
           title: '', 
@@ -746,17 +771,26 @@
           deadline: formData.get('deadline'),
           details: formData.get('details'),
           status: editingTask ? editingTask.status : 'todo',
-          duration: formData.get('type') === 'ดูดวงแบบโทรคุย' ? parseFloat(formData.get('duration')) : null
+          duration: durationVal,
+          // ถ้าแก้คิวใหม่ ให้รีเซ็ตเวลาทั้ง 2 ก้อนให้เท่ากัน
+          remainingTime: durationVal
         };
 
         fetchAPI({ action: 'saveOrUpdateTask', task: taskData })
           .then(res => {
              if (res.status === 'success') {
                 setTasks(prev => editingTask ? prev.map(t => t.id === res.task.id ? res.task : t) : [...prev, res.task]);
+                setShowModal(false); 
+                setEditingTask(null);
+             } else {
+                alert("❌ บันทึกไม่ได้: \n" + res.message);
              }
-             setIsSaving(false); setShowModal(false); setEditingTask(null);
+             setIsSaving(false);
           })
-          .catch(() => setIsSaving(false));
+          .catch((err) => {
+             alert("❌ เชื่อมต่อ Google Sheets ไม่สำเร็จ \n" + err.message);
+             setIsSaving(false);
+          });
       };
 
       const executeDeleteTask = () => {
@@ -1014,76 +1048,6 @@
               </div>
             )}
 
-            {showImageModal && (
-              <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/10 backdrop-blur-[2px] animate-fadeIn">
-                <form onSubmit={(e) => { 
-                    e.preventDefault(); 
-                    if (tempImageUrl) { 
-                        let finalUrl = tempImageUrl;
-                        const match = finalUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || finalUrl.match(/id=([a-zA-Z0-9_-]+)/) || finalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                        if (match && match[1]) {
-                            finalUrl = `https://lh3.googleusercontent.com/d/${match[1]}`;
-                        }
-                        setProfileImage(finalUrl); 
-                        fetchAPI({ action: 'saveProfileImage', imageUrl: finalUrl });
-                    } 
-                    setShowImageModal(false); 
-                    setTempImageUrl(''); 
-                }} className="backdrop-blur-xl w-full max-w-xs rounded-[35px] p-6 shadow-2xl animate-slideUp" style={{ backgroundColor: `${COLORS.modalBg}f2`, borderWidth: '1px', borderColor: COLORS.cardBorder }}>
-                   <h3 className="text-sm font-black mb-4 text-center text-gray-800">เปลี่ยนรูปโปรไฟล์ 🐰</h3>
-                   <div className="space-y-2">
-                     <input type="url" required value={tempImageUrl} onChange={(e) => setTempImageUrl(e.target.value)} className="w-full p-3.5 rounded-2xl border border-gray-100 outline-none text-[11px] shadow-sm focus:border-[#f4f0fc] transition-all text-center" style={{ backgroundColor: COLORS.cardInner }} placeholder="วางลิงก์รูปภาพ Google Drive ที่นี่..." />
-                     <button type="submit" className="w-full py-3.5 rounded-2xl font-black text-xs mt-3 text-white shadow-lg active:scale-95 transition-all" style={{ backgroundColor: COLORS.pinkDeep }}>Save Image</button>
-                     <button type="button" onClick={() => { setShowImageModal(false); setTempImageUrl(''); }} className="w-full text-[9px] font-bold text-gray-300 mt-1 uppercase tracking-widest">Close</button>
-                   </div>
-                </form>
-              </div>
-            )}
-
-            {showBannerModal && (
-              <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/10 backdrop-blur-[2px] animate-fadeIn">
-                <form onSubmit={(e) => { 
-                    e.preventDefault(); 
-                    if (tempBannerUrl) { 
-                        let finalUrl = tempBannerUrl;
-                        const match = finalUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || finalUrl.match(/id=([a-zA-Z0-9_-]+)/) || finalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                        if (match && match[1]) {
-                            finalUrl = `https://lh3.googleusercontent.com/d/${match[1]}`;
-                        }
-                        setBannerImage(finalUrl); 
-                        toggleBannerVisibility(true);
-                        fetchAPI({ action: 'saveBannerImage', imageUrl: finalUrl });
-                    } 
-                    setShowBannerModal(false); 
-                    setTempBannerUrl(''); 
-                }} className="backdrop-blur-xl w-full max-w-xs rounded-[35px] p-6 shadow-2xl animate-slideUp" style={{ backgroundColor: `${COLORS.modalBg}f2`, borderWidth: '1px', borderColor: COLORS.cardBorder }}>
-                   <h3 className="text-sm font-black mb-4 text-center text-gray-800">เปลี่ยนแบนเนอร์</h3>
-                   <div className="space-y-2">
-                     <input type="url" required value={tempBannerUrl} onChange={(e) => setTempBannerUrl(e.target.value)} className="w-full p-3.5 rounded-2xl border border-gray-100 outline-none text-[11px] shadow-sm focus:border-[#f4f0fc] transition-all text-center" style={{ backgroundColor: COLORS.cardInner }} placeholder="วางลิงก์รูปภาพ Google Drive..." />
-                     <button type="submit" className="w-full py-3.5 rounded-2xl font-black text-xs mt-3 text-white shadow-lg active:scale-95 transition-all" style={{ backgroundColor: COLORS.orangeDeep }}>Save Banner</button>
-                     <button type="button" onClick={() => { setShowBannerModal(false); setTempBannerUrl(''); }} className="w-full text-[9px] font-bold text-gray-300 mt-1 uppercase tracking-widest">Close</button>
-                   </div>
-                </form>
-              </div>
-            )}
-
-            {taskToDelete && (
-              <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/20 backdrop-blur-[2px] animate-fadeIn">
-                <div className="backdrop-blur-xl w-full max-w-[260px] rounded-[30px] p-6 shadow-2xl animate-slideUp text-center" style={{ backgroundColor: `${COLORS.modalBg}f2`, borderWidth: '1px', borderColor: COLORS.cardBorder }}>
-                  <div className="w-14 h-14 rounded-full bg-red-50 text-red-400 flex items-center justify-center mx-auto mb-3 shadow-sm border border-red-100">
-                     <IconTrash size={26} />
-                  </div>
-                  <h3 className="text-[14px] font-black mb-1 text-gray-800">ยืนยันการลบ?</h3>
-                  <p className="text-[10px] font-bold text-gray-500 mb-5">คุณต้องการลบคิวงานนี้ใช่หรือไม่<br/>(ไม่สามารถกู้คืนได้)</p>
-                  
-                  <div className="flex gap-2">
-                    <button onClick={() => setTaskToDelete(null)} className="flex-1 py-3 rounded-2xl font-black text-[10px] text-gray-500 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all shadow-sm">ยกเลิก</button>
-                    <button onClick={executeDeleteTask} className="flex-1 py-3 rounded-2xl font-black text-[10px] text-white bg-red-400 hover:bg-red-500 active:scale-95 transition-all shadow-sm">ลบข้อมูล</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
           </div>
           
           <style>{`
@@ -1120,6 +1084,4 @@
     root.render(<App />);
   </script>
 </body>
-
 </html>
-
