@@ -230,6 +230,9 @@
       </div>
     ));
 
+    // ==========================================
+    // 🃏 COMPONENT: TaskCard (คิวงาน + นาฬิกา)
+    // ==========================================
     const TaskCard = React.memo(({ task, isAdmin, onEdit, onToggleDoing, onToggleStatus, onUpdateDuration }) => {
       
       const channelColor = task.channel === 'LINE' ? '#D5EDB5' : task.channel === 'FB' || task.channel === 'FACEBOOK' ? '#C0D5E9' : task.channel === 'IG' ? '#FFD3DE' : COLORS.purpleDeep;
@@ -241,7 +244,6 @@
       
       const isFortune = task.type === 'ดูดวงแบบโทรคุย';
 
-      // ✨ คอนเซปต์ใหม่: แยก Max Time (ตั้งต้น) และ Time Left (เวลาที่เหลือ)
       const durationMins = parseFloat(task.duration) || 15;
       const remainingMins = task.remainingTime !== undefined && task.remainingTime !== '' ? parseFloat(task.remainingTime) : durationMins;
 
@@ -262,7 +264,7 @@
         } else if (isRunning && timeLeft <= 0) {
           setIsRunning(false);
           clearInterval(interval);
-          onUpdateDuration(task.id, 0); // หมดเวลา = เหลือ 0
+          onUpdateDuration(task.id, 0);
         }
         return () => clearInterval(interval);
       }, [isRunning, timeLeft, task.id, onUpdateDuration]);
@@ -270,7 +272,7 @@
       useEffect(() => {
         if (task.status !== 'doing' && isRunning) {
           setIsRunning(false);
-          onUpdateDuration(task.id, timeLeft / 60); // กดเปลี่ยนสถานะ = หยุดและเซฟ
+          onUpdateDuration(task.id, timeLeft / 60);
         }
       }, [task.status]);
 
@@ -279,19 +281,17 @@
         if (timeLeft > 0) {
           if (isRunning) {
             setIsRunning(false);
-            onUpdateDuration(task.id, timeLeft / 60); // Pause = เซฟเวลาที่เหลือ
+            onUpdateDuration(task.id, timeLeft / 60); 
           } else {
             setIsRunning(true);
           }
         }
       };
 
-      // ✨ ปุ่มรีเซ็ต: ดึงเวลาให้กลับไปเท่ากับ maxTime (เวลาตั้งต้น)
       const handleResetTimer = (e) => {
         e.stopPropagation();
         setIsRunning(false);
         setTimeLeft(maxTime);
-        // สั่งให้ฐานข้อมูลอัปเดตเวลาที่เหลือให้กลับมาเท่ากับเวลาตั้งต้น
         onUpdateDuration(task.id, maxTime / 60, maxTime / 60); 
       };
 
@@ -300,7 +300,6 @@
         setShowAddModal(true);
       };
 
-      // ✨ ปุ่มเพิ่มเวลา: บวกเวลาทั้งในหลอด (Remaining) และเวลาเต็ม (Max)
       const confirmAddCustomTime = (e) => {
         e.stopPropagation();
         const mins = parseInt(addMinsInput, 10);
@@ -310,7 +309,7 @@
           const newTime = timeLeft + addedSecs;
           setMaxTime(newMax);
           setTimeLeft(newTime);
-          onUpdateDuration(task.id, newTime / 60, newMax / 60); // เซฟค่าใหม่ลง DB
+          onUpdateDuration(task.id, newTime / 60, newMax / 60); 
         }
         setShowAddModal(false);
         setAddMinsInput('');
@@ -318,7 +317,7 @@
 
       const mins = Math.floor(timeLeft / 60);
       const secs = timeLeft % 60;
-      const circumference = 251.2;
+      const circumference = 276.46; // 2 * PI * 44
       const strokeOffset = circumference - (timeLeft / maxTime) * circumference;
       
       const isWarning = timeLeft > 0 && timeLeft <= 60; 
@@ -350,23 +349,10 @@
           {isFortune ? (
             <div className="flex w-full pl-2 pr-1 relative z-10 items-center py-1">
                
-               {isAdmin && (
-                 <div className="flex flex-col gap-2 mr-3 pr-3 border-r border-[#CCAAE6]/40 items-center justify-center">
-                     <button onClick={handleToggleTimer} className="w-7 h-7 flex items-center justify-center bg-[#f4f0fc] text-[#9673D2] rounded-full hover:bg-[#E2CEF3] hover:scale-110 active:scale-95 transition-all shadow-sm" title="Play/Pause">
-                        {isRunning ? <IconPause size={12} /> : <IconPlay size={12} />}
-                     </button>
-                     <button onClick={handleResetTimer} className="w-7 h-7 flex items-center justify-center bg-[#f4f0fc] text-[#9673D2] rounded-full hover:bg-[#E2CEF3] hover:scale-110 active:scale-95 transition-all shadow-sm" title="Reset">
-                        <IconRefresh size={12} />
-                     </button>
-                     <button onClick={handleOpenAddModal} className="w-7 h-7 flex items-center justify-center bg-[#f4f0fc] text-[#9673D2] rounded-full hover:bg-[#E2CEF3] hover:scale-110 active:scale-95 transition-all shadow-sm" title="เพิ่มเวลา">
-                        <IconPlus size={12} />
-                     </button>
-                 </div>
-               )}
-
-               <div className={`relative flex items-center justify-center ${!isAdmin ? 'border-r border-[#CCAAE6]/40 pr-3 mr-3' : ''}`}>
-                  <div className="relative w-[68px] h-[68px] flex items-center justify-center drop-shadow-sm">
-                     <div className="absolute inset-0 bg-white rounded-full shadow-[0_4px_15px_rgba(150,115,210,0.15)] border border-white/50"></div>
+               {/* 🕒 โซนซ้าย (Timer - Minimalist) */}
+               <div className={`relative flex items-center justify-center border-r border-[#CCAAE6]/40 pr-3 mr-3 shrink-0`}>
+                  <div className="relative w-[64px] h-[64px] flex items-center justify-center drop-shadow-sm">
+                     <div className="absolute inset-0 bg-white rounded-full shadow-[0_2px_10px_rgba(150,115,210,0.1)] border border-white/80"></div>
                      
                      <svg className="w-full h-full transform -rotate-90 relative z-10" viewBox="0 0 100 100">
                         <defs>
@@ -375,18 +361,18 @@
                             <stop offset="100%" stopColor={timerColor2} />
                           </linearGradient>
                           <filter id={`glow-${task.id}`} x="-20%" y="-20%" width="140%" height="140%">
-                            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor={timerColor1} floodOpacity="0.4"/>
+                            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor={timerColor1} floodOpacity="0.3"/>
                           </filter>
                         </defs>
 
-                        <circle cx="50" cy="50" r="40" fill="none" stroke="#f4f0fc" strokeWidth="9" />
+                        <circle cx="50" cy="50" r="44" fill="none" stroke="#f4f0fc" strokeWidth="1.5" />
                         
                         <circle 
-                          cx="50" cy="50" r="40" 
+                          cx="50" cy="50" r="44" 
                           fill="none" 
                           stroke={`url(#timerGrad-${task.id})`}
-                          strokeWidth="9" 
-                          strokeDasharray="251.2" 
+                          strokeWidth="2.5" 
+                          strokeDasharray="276.46" 
                           strokeDashoffset={-strokeOffset} 
                           strokeLinecap="round" 
                           filter={`url(#glow-${task.id})`}
@@ -394,38 +380,61 @@
                         />
                      </svg>
 
-                     <div className="absolute flex flex-col items-center justify-center mt-0.5 z-20">
-                        <span className={`text-[16px] font-black leading-none tracking-tighter ${isDanger ? 'animate-pulse' : ''}`} style={{ color: isDanger ? '#ef4444' : COLORS.blueDeep }}>
-                           {mins}:{String(secs).padStart(2, '0')}
+                     <div className="absolute flex flex-col items-center justify-center z-20">
+                        <span className={`text-[22px] font-light leading-none tracking-tighter ${isDanger ? 'animate-pulse' : ''}`} style={{ color: isDanger ? '#ef4444' : COLORS.blueDeep }}>
+                           {mins}
+                        </span>
+                        <span className={`text-[10px] font-light leading-none tracking-widest mt-1`} style={{ color: isDanger ? '#ef4444' : COLORS.textSoft }}>
+                           {String(secs).padStart(2, '0')}
                         </span>
                      </div>
                   </div>
                </div>
 
-               <div className="flex-1 pl-2 min-w-0 flex flex-col justify-between">
+               {/* 📋 โซนขวา (ข้อมูลงานและปุ่มควบคุม) */}
+               <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                   <div>
-                     <div className="flex justify-between items-start mb-0.5">
-                        <div className="flex items-center gap-1 min-w-0">
+                     <div className="flex justify-between items-start mb-1">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                            <span className="font-bold text-[13px] truncate" style={{ color: COLORS.textMain }}>{task.client}</span>
-                           {task.priority === 'urgent' && <span className="text-[8px] font-bold animate-pulse px-1.5 py-0.5 rounded-full shadow-sm" style={{ color: COLORS.pinkDeep, backgroundColor: COLORS.buttonBg }}>🔥 ด่วน</span>}
+                           <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black uppercase border shrink-0 ${channelBadgeStyle}`}>{task.channel}</span>
+                           {task.priority === 'urgent' && <span className="text-[8px] font-bold animate-pulse px-1.5 py-0.5 rounded-full shadow-sm shrink-0" style={{ color: COLORS.pinkDeep, backgroundColor: COLORS.buttonBg }}>🔥 ด่วน</span>}
+                        </div>
+                        <div className="flex items-center gap-1 text-[8px] font-black bg-[#f4f0fc]/80 px-2 py-0.5 rounded-lg border border-[#CCAAE6] shadow-sm ml-1 shrink-0" style={{ color: COLORS.pinkDeep }}>
+                            <IconCalendar size={9} style={{ color: COLORS.pinkDeep }} />
+                            {new Date(task.deadline).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                         </div>
                      </div>
-                     <span className={`text-[9px] font-bold ${task.status === 'done' ? 'line-through text-gray-300' : 'text-gray-400'}`}>{task.type}</span>
+                     <span className={`text-[9px] font-bold ${task.status === 'done' ? 'line-through text-gray-300' : 'text-gray-400'}`}>{task.type} {task.duration ? `(${task.duration} นาที)` : ''}</span>
                      {task.details && (
                         <div className={`text-[10px] font-medium truncate mt-0.5 ${task.status === 'done' ? 'text-gray-300' : 'text-gray-600'}`}>{task.details}</div>
                      )}
                   </div>
 
                   <div className="flex justify-between items-end mt-2">
-                     <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black uppercase border ${channelBadgeStyle}`}>{task.channel}</span>
+                     {isAdmin ? (
+                        <div className="flex gap-1.5">
+                           <button onClick={handleToggleTimer} className="w-[24px] h-[24px] rounded-[6px] flex items-center justify-center bg-[#f4f0fc] text-[#9673D2] border border-[#CCAAE6]/50 transition-all active:scale-90 shadow-sm" title="Play/Pause">
+                              {isRunning ? <IconPause size={10} /> : <IconPlay size={10} />}
+                           </button>
+                           <button onClick={handleResetTimer} className="w-[24px] h-[24px] rounded-[6px] flex items-center justify-center bg-[#f4f0fc] text-[#9673D2] border border-[#CCAAE6]/50 transition-all active:scale-90 shadow-sm" title="Reset">
+                              <IconRefresh size={10} />
+                           </button>
+                           <button onClick={handleOpenAddModal} className="w-[24px] h-[24px] rounded-[6px] flex items-center justify-center bg-[#f4f0fc] text-[#9673D2] border border-[#CCAAE6]/50 transition-all active:scale-90 shadow-sm" title="เพิ่มเวลา">
+                              <IconPlus size={10} />
+                           </button>
+                        </div>
+                     ) : (
+                        <div></div>
+                     )}
                      
                      {isAdmin ? (
                         <div className="flex gap-1.5">
-                           <button onClick={(e) => onToggleDoing(e, task.id)} className={`relative w-[26px] h-[26px] rounded-[6px] flex items-center justify-center transition-all active:scale-90 shadow-sm`} style={{ color: task.status === 'doing' ? COLORS.orangeDeep : '#B0BEC5', backgroundColor: task.status === 'doing' ? '#f4f0fc' : COLORS.buttonBg, borderWidth: '2px', borderColor: `${COLORS.cardBorder}cc` }}>
-                              <div className={`${task.status === 'doing' ? 'animate-spin-slow' : ''} flex items-center justify-center`}><IconLoader size={12} /></div>
+                           <button onClick={(e) => onToggleDoing(e, task.id)} className={`relative w-[24px] h-[24px] rounded-[6px] flex items-center justify-center transition-all active:scale-90 shadow-sm`} style={{ color: task.status === 'doing' ? COLORS.orangeDeep : '#B0BEC5', backgroundColor: task.status === 'doing' ? '#f4f0fc' : COLORS.buttonBg, borderWidth: '1.5px', borderColor: `${COLORS.cardBorder}cc` }}>
+                              <div className={`${task.status === 'doing' ? 'animate-spin-slow' : ''} flex items-center justify-center`}><IconLoader size={11} /></div>
                            </button>
-                           <button onClick={(e) => onToggleStatus(e, task.id)} className={`relative w-[26px] h-[26px] rounded-[6px] flex items-center justify-center transition-all active:scale-90 shadow-sm`} style={{ color: task.status === 'done' ? COLORS.pinkDeep : '#B0BEC5', backgroundColor: task.status === 'done' ? '#f4f0fc' : COLORS.buttonBg, borderWidth: '2px', borderColor: `${COLORS.cardBorder}cc` }}>
-                              <IconCheck size={14} />
+                           <button onClick={(e) => onToggleStatus(e, task.id)} className={`relative w-[24px] h-[24px] rounded-[6px] flex items-center justify-center transition-all active:scale-90 shadow-sm`} style={{ color: task.status === 'done' ? COLORS.pinkDeep : '#B0BEC5', backgroundColor: task.status === 'done' ? '#f4f0fc' : COLORS.buttonBg, borderWidth: '1.5px', borderColor: `${COLORS.cardBorder}cc` }}>
+                              <IconCheck size={13} />
                            </button>
                         </div>
                      ) : (
@@ -615,7 +624,7 @@
       // ==========================================
       // 🌐 URL (เปลี่ยนตรงนี้!)
       // ==========================================
-      const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw2HdyevotVH-Raq2bLJjKFI9blissQG6KvJdm4nBXYr5mfG-MNS3Xc-rAPaSuFijSC/exec";
+      const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxOmyFyXNpDOPxtgbKc98iIcQ31St6mF2aQiVTQ4leUcxxf_yKuSLq_Zds5pAdfB_8i/exec";
 
       const fetchAPI = async (payload) => {
         try {
@@ -633,7 +642,8 @@
 
       useEffect(() => {
         document.title = "A-TAO TAROT"; 
-        fetchAPI({ action: 'getInitialData' })
+        fetch(WEB_APP_URL + "?action=getInitialData")
+          .then(res => res.json())
           .then(response => {
             if (response.status === 'success') {
               setTasks(response.data.tasks || []);
@@ -721,7 +731,6 @@
         }));
       }, []);
 
-      // ✨ ฟังก์ชันรับค่าเวลาทั้ง 2 ก้อน
       const updateTaskDuration = useCallback((id, newRemainingTime, newMaxTime) => {
         setTasks(prev => prev.map(t => {
           if (t.id === id) {
@@ -753,12 +762,6 @@
         setIsSaving(true);
         const formData = new FormData(e.target);
         
-        if (formData.get('type') === 'ดูดวงแบบโทรคุย' && !formData.get('duration')) {
-           alert("⚠️ กรุณาเลือกเวลา (10, 15, 30, 60 นาที)");
-           setIsSaving(false);
-           return;
-        }
-
         const durationVal = formData.get('type') === 'ดูดวงแบบโทรคุย' ? parseFloat(formData.get('duration')) : null;
 
         const taskData = {
@@ -772,7 +775,6 @@
           details: formData.get('details'),
           status: editingTask ? editingTask.status : 'todo',
           duration: durationVal,
-          // ถ้าแก้คิวใหม่ ให้รีเซ็ตเวลาทั้ง 2 ก้อนให้เท่ากัน
           remainingTime: durationVal
         };
 
@@ -780,15 +782,13 @@
           .then(res => {
              if (res.status === 'success') {
                 setTasks(prev => editingTask ? prev.map(t => t.id === res.task.id ? res.task : t) : [...prev, res.task]);
-                setShowModal(false); 
-                setEditingTask(null);
-             } else {
-                alert("❌ บันทึกไม่ได้: \n" + res.message);
              }
-             setIsSaving(false);
+             setIsSaving(false); 
+             setShowModal(false); 
+             setEditingTask(null);
           })
           .catch((err) => {
-             alert("❌ เชื่อมต่อ Google Sheets ไม่สำเร็จ \n" + err.message);
+             console.error(err);
              setIsSaving(false);
           });
       };
@@ -1045,6 +1045,76 @@
                      <button type="button" onClick={() => { setShowAuthModal(false); setAuthError(false); setPassword(''); }} className="w-full text-[9px] font-bold text-gray-300 mt-1 uppercase tracking-widest" disabled={isVerifyingAuth}>Close</button>
                    </div>
                 </form>
+              </div>
+            )}
+
+            {showImageModal && (
+              <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/10 backdrop-blur-[2px] animate-fadeIn">
+                <form onSubmit={(e) => { 
+                    e.preventDefault(); 
+                    if (tempImageUrl) { 
+                        let finalUrl = tempImageUrl;
+                        const match = finalUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || finalUrl.match(/id=([a-zA-Z0-9_-]+)/) || finalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                        if (match && match[1]) {
+                            finalUrl = `https://lh3.googleusercontent.com/d/${match[1]}`;
+                        }
+                        setProfileImage(finalUrl); 
+                        fetchAPI({ action: 'saveProfileImage', imageUrl: finalUrl });
+                    } 
+                    setShowImageModal(false); 
+                    setTempImageUrl(''); 
+                }} className="backdrop-blur-xl w-full max-w-xs rounded-[35px] p-6 shadow-2xl animate-slideUp" style={{ backgroundColor: `${COLORS.modalBg}f2`, borderWidth: '1px', borderColor: COLORS.cardBorder }}>
+                   <h3 className="text-sm font-black mb-4 text-center text-gray-800">เปลี่ยนรูปโปรไฟล์ 🐰</h3>
+                   <div className="space-y-2">
+                     <input type="url" required value={tempImageUrl} onChange={(e) => setTempImageUrl(e.target.value)} className="w-full p-3.5 rounded-2xl border border-gray-100 outline-none text-[11px] shadow-sm focus:border-[#f4f0fc] transition-all text-center" style={{ backgroundColor: COLORS.cardInner }} placeholder="วางลิงก์รูปภาพ Google Drive ที่นี่..." />
+                     <button type="submit" className="w-full py-3.5 rounded-2xl font-black text-xs mt-3 text-white shadow-lg active:scale-95 transition-all" style={{ backgroundColor: COLORS.pinkDeep }}>Save Image</button>
+                     <button type="button" onClick={() => { setShowImageModal(false); setTempImageUrl(''); }} className="w-full text-[9px] font-bold text-gray-300 mt-1 uppercase tracking-widest">Close</button>
+                   </div>
+                </form>
+              </div>
+            )}
+
+            {showBannerModal && (
+              <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/10 backdrop-blur-[2px] animate-fadeIn">
+                <form onSubmit={(e) => { 
+                    e.preventDefault(); 
+                    if (tempBannerUrl) { 
+                        let finalUrl = tempBannerUrl;
+                        const match = finalUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || finalUrl.match(/id=([a-zA-Z0-9_-]+)/) || finalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                        if (match && match[1]) {
+                            finalUrl = `https://lh3.googleusercontent.com/d/${match[1]}`;
+                        }
+                        setBannerImage(finalUrl); 
+                        toggleBannerVisibility(true);
+                        fetchAPI({ action: 'saveBannerImage', imageUrl: finalUrl });
+                    } 
+                    setShowBannerModal(false); 
+                    setTempBannerUrl(''); 
+                }} className="backdrop-blur-xl w-full max-w-xs rounded-[35px] p-6 shadow-2xl animate-slideUp" style={{ backgroundColor: `${COLORS.modalBg}f2`, borderWidth: '1px', borderColor: COLORS.cardBorder }}>
+                   <h3 className="text-sm font-black mb-4 text-center text-gray-800">เปลี่ยนแบนเนอร์</h3>
+                   <div className="space-y-2">
+                     <input type="url" required value={tempBannerUrl} onChange={(e) => setTempBannerUrl(e.target.value)} className="w-full p-3.5 rounded-2xl border border-gray-100 outline-none text-[11px] shadow-sm focus:border-[#f4f0fc] transition-all text-center" style={{ backgroundColor: COLORS.cardInner }} placeholder="วางลิงก์รูปภาพ Google Drive..." />
+                     <button type="submit" className="w-full py-3.5 rounded-2xl font-black text-xs mt-3 text-white shadow-lg active:scale-95 transition-all" style={{ backgroundColor: COLORS.orangeDeep }}>Save Banner</button>
+                     <button type="button" onClick={() => { setShowBannerModal(false); setTempBannerUrl(''); }} className="w-full text-[9px] font-bold text-gray-300 mt-1 uppercase tracking-widest">Close</button>
+                   </div>
+                </form>
+              </div>
+            )}
+
+            {taskToDelete && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/20 backdrop-blur-[2px] animate-fadeIn">
+                <div className="backdrop-blur-xl w-full max-w-[260px] rounded-[30px] p-6 shadow-2xl animate-slideUp text-center" style={{ backgroundColor: `${COLORS.modalBg}f2`, borderWidth: '1px', borderColor: COLORS.cardBorder }}>
+                  <div className="w-14 h-14 rounded-full bg-red-50 text-red-400 flex items-center justify-center mx-auto mb-3 shadow-sm border border-red-100">
+                     <IconTrash size={26} />
+                  </div>
+                  <h3 className="text-[14px] font-black mb-1 text-gray-800">ยืนยันการลบ?</h3>
+                  <p className="text-[10px] font-bold text-gray-500 mb-5">คุณต้องการลบคิวงานนี้ใช่หรือไม่<br/>(ไม่สามารถกู้คืนได้)</p>
+                  
+                  <div className="flex gap-2">
+                    <button onClick={() => setTaskToDelete(null)} className="flex-1 py-3 rounded-2xl font-black text-[10px] text-gray-500 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all shadow-sm">ยกเลิก</button>
+                    <button onClick={executeDeleteTask} className="flex-1 py-3 rounded-2xl font-black text-[10px] text-white bg-red-400 hover:bg-red-500 active:scale-95 transition-all shadow-sm">ลบข้อมูล</button>
+                  </div>
+                </div>
               </div>
             )}
 
