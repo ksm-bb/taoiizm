@@ -38,6 +38,7 @@
     const IconPause = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>;
     const IconRefresh = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>;
 
+    // 🎨 โทนสีใหม่
     const COLORS = {
       blue: '#E3EBFD',
       pink: '#D4D2F2',
@@ -247,10 +248,10 @@
       const remainingMins = task.remainingTime !== undefined && task.remainingTime !== '' ? parseFloat(task.remainingTime) : durationMins;
 
       const initSecs = Math.round(remainingMins * 60);
-      const maxSecs = Math.round(durationMins * 60);
+      const baseMaxSecs = Math.round(durationMins * 60);
 
       const [timeLeft, setTimeLeft] = useState(initSecs);
-      const [maxTime, setMaxTime] = useState(maxSecs);
+      const [maxTime, setMaxTime] = useState(Math.max(baseMaxSecs, initSecs)); 
       const [isRunning, setIsRunning] = useState(false);
       
       const [showAddModal, setShowAddModal] = useState(false);
@@ -290,8 +291,10 @@
       const handleResetTimer = (e) => {
         e.stopPropagation();
         setIsRunning(false);
-        setTimeLeft(maxTime);
-        onUpdateDuration(task.id, maxTime / 60, maxTime / 60); 
+        const originalSecs = Math.round(durationMins * 60);
+        setTimeLeft(originalSecs);
+        setMaxTime(originalSecs);
+        onUpdateDuration(task.id, durationMins, durationMins); 
       };
 
       const handleOpenAddModal = (e) => {
@@ -304,11 +307,11 @@
         const mins = parseInt(addMinsInput, 10);
         if (!isNaN(mins) && mins > 0) {
           const addedSecs = mins * 60;
-          const newMax = maxTime + addedSecs;
           const newTime = timeLeft + addedSecs;
+          const newMax = Math.max(maxTime, newTime); 
           setMaxTime(newMax);
           setTimeLeft(newTime);
-          onUpdateDuration(task.id, newTime / 60, newMax / 60); 
+          onUpdateDuration(task.id, newTime / 60, undefined); 
         }
         setShowAddModal(false);
         setAddMinsInput('');
@@ -316,8 +319,7 @@
 
       const mins = Math.floor(timeLeft / 60);
       const secs = timeLeft % 60;
-      // 2 * PI * 46 (radius) = 289.02
-      const circumference = 289.02;
+      const circumference = 289.03; // 2 * PI * 46
       const strokeOffset = circumference - (timeLeft / maxTime) * circumference;
       
       const isWarning = timeLeft > 0 && timeLeft <= 60; 
@@ -347,12 +349,23 @@
           <div className="absolute left-2 top-3 bottom-3 w-1 rounded-full shadow-sm z-10" style={{ backgroundColor: channelColor }}></div>
           
           {isFortune ? (
-            <div className="flex w-full pl-2 pr-1 relative z-10 items-start py-1 gap-2.5">
+            <div className="flex w-full pl-2 pr-1 relative z-10 items-start py-1 gap-1">
                
-               {/* 🕒 โซนซ้าย (Timer - Minimalist) */}
-               <div className="relative flex items-center justify-center shrink-0 pt-0.5">
-                  <div className="relative w-[58px] h-[58px] flex items-center justify-center drop-shadow-sm">
-                     <div className="absolute inset-0 bg-white rounded-full shadow-[0_2px_8px_rgba(150,115,210,0.1)] border border-white/80"></div>
+               {/* 🕒 โซนซ้าย (Timer Widget - ลูกแก้วพยากรณ์) */}
+               <div className="relative flex flex-col items-center justify-start border-r border-[#CCAAE6]/40 pr-3 mr-2 shrink-0">
+                  
+                  {/* ✨ ลูกแก้วพยากรณ์ (Interactive Dial) */}
+                  <div 
+                     className={`relative w-[58px] h-[58px] flex items-center justify-center drop-shadow-sm transition-transform ${isAdmin ? 'cursor-pointer hover:scale-[1.03] active:scale-95 group' : ''}`}
+                     onClick={(e) => { e.stopPropagation(); if (isAdmin) handleToggleTimer(e); }}
+                     title={isAdmin ? "Play / Pause" : ""}
+                  >
+                     <div className="absolute inset-0 bg-white/80 rounded-full shadow-[inset_0_-3px_8px_rgba(150,115,210,0.2),0_2px_8px_rgba(150,115,210,0.15)] border border-white/80 overflow-hidden">
+                        {/* หมอกสีพาสเทลหมุนวน */}
+                        <div className={`absolute inset-[-50%] opacity-70 blur-[5px] transition-all duration-700 ${isRunning && !isDanger ? 'animate-spin-very-slow' : ''}`} style={{ background: 'conic-gradient(from 0deg, #E3EBFD, #f4f0fc, #D4D2F2, #f4f0fc, #E3EBFD)' }}></div>
+                        {/* แสงสะท้อนตกกระทบลูกแก้ว */}
+                        <div className="absolute top-[12%] left-[18%] w-[40%] h-[18%] bg-white/80 rounded-[50%] rotate-[-35deg] blur-[0.5px]"></div>
+                     </div>
                      
                      <svg className="w-full h-full transform -rotate-90 relative z-10" viewBox="0 0 100 100">
                         <defs>
@@ -366,7 +379,7 @@
                         </defs>
 
                         {/* เส้นพื้นหลังบางลง */}
-                        <circle cx="50" cy="50" r="46" fill="none" stroke="#f4f0fc" strokeWidth="1.5" />
+                        <circle cx="50" cy="50" r="46" fill="none" stroke="#ffffff" strokeWidth="1.5" opacity="0.6"/>
                         
                         {/* เส้นนับถอยหลังบางลง */}
                         <circle 
@@ -374,7 +387,7 @@
                           fill="none" 
                           stroke={`url(#timerGrad-${task.id})`}
                           strokeWidth="3" 
-                          strokeDasharray="289.02" 
+                          strokeDasharray="289.03" 
                           strokeDashoffset={-strokeOffset} 
                           strokeLinecap="round" 
                           filter={`url(#glow-${task.id})`}
@@ -382,28 +395,47 @@
                         />
                      </svg>
 
-                     {/* ตัวเลขเวลาแยกบรรทัด และฟอนต์บางลง */}
-                     <div className="absolute flex flex-col items-center justify-center z-20">
+                     {/* ตัวเลขเวลาแบบแยกบรรทัด */}
+                     <div className="absolute flex flex-col items-center justify-center z-20 mt-0.5 pointer-events-none">
                         <span className={`text-[18px] font-light leading-[1] tracking-tight ${isDanger ? 'animate-pulse' : ''}`} style={{ color: isDanger ? '#ef4444' : COLORS.textMain }}>
                            {mins}
                         </span>
                         <span className={`text-[9px] font-medium leading-[1] tracking-widest mt-[2px]`} style={{ color: isDanger ? '#ef4444' : COLORS.textSoft }}>
                            {String(secs).padStart(2, '0')}
                         </span>
+                        {/* ไอคอน Play/Pause ภายในวงกลม (โชว์เฉพาะ Admin) */}
+                        {isAdmin && (
+                           <div className={`mt-1 transition-opacity ${isRunning ? 'opacity-50 group-hover:opacity-100' : 'opacity-100'} ${isDanger ? 'hidden' : ''}`} style={{ color: isRunning ? COLORS.orangeDeep : COLORS.pinkDeep }}>
+                              {isRunning ? <IconPause size={9} /> : <IconPlay size={9} className="ml-[1px]" />}
+                           </div>
+                        )}
                      </div>
                   </div>
+
+                  {/* ปุ่ม Reset และ Add Time ใต้นาฬิกาแบบมินิมอล */}
+                  {isAdmin && (
+                     <div className="flex gap-2 mt-2">
+                        <button onClick={handleResetTimer} className="w-[20px] h-[20px] rounded-full flex items-center justify-center bg-white/80 text-[#A788DC] border border-[#CCAAE6]/30 transition-all hover:bg-[#f4f0fc] hover:text-[#9673D2] active:scale-90 shadow-[0_2px_5px_rgba(150,115,210,0.1)]" title="Reset">
+                           <IconRefresh size={9} />
+                        </button>
+                        <button onClick={handleOpenAddModal} className="w-[20px] h-[20px] rounded-full flex items-center justify-center bg-white/80 text-[#A788DC] border border-[#CCAAE6]/30 transition-all hover:bg-[#f4f0fc] hover:text-[#9673D2] active:scale-90 shadow-[0_2px_5px_rgba(150,115,210,0.1)]" title="เพิ่มเวลา">
+                           <IconPlus size={9} />
+                        </button>
+                     </div>
+                  )}
                </div>
 
-               {/* 📋 โซนขวา (ข้อมูลงานและปุ่มควบคุม) */}
+               {/* 📋 โซนขวา (ข้อมูลงานและสถานะ) */}
                <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                   <div>
-                     {/* ชื่อลูกค้า + ป้ายช่องทาง + ป้ายกำหนดส่ง */}
-                     <div className="flex justify-between items-start mb-0.5">
+                     {/* ชื่อลูกค้า + ป้ายช่องทาง + ป้ายด่วน */}
+                     <div className="flex justify-between items-start mb-1">
                         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                            <span className="font-bold text-[13px] truncate" style={{ color: COLORS.textMain }}>{task.client}</span>
                            <span className={`text-[7px] px-1.5 py-0.5 rounded-md font-black uppercase border shrink-0 ${channelBadgeStyle}`}>{task.channel}</span>
                            {task.priority === 'urgent' && <span className="text-[8px] font-bold animate-pulse px-1.5 py-0.5 rounded-full shadow-sm shrink-0" style={{ color: COLORS.pinkDeep, backgroundColor: COLORS.buttonBg }}>🔥 ด่วน</span>}
                         </div>
+                        {/* ป้ายกำหนดส่ง อยู่มุมขวาบน */}
                         <div className="flex items-center gap-1 text-[8px] font-black bg-[#f4f0fc]/80 px-2 py-0.5 rounded-lg border border-[#CCAAE6] shadow-sm ml-1 shrink-0" style={{ color: COLORS.pinkDeep }}>
                             <IconCalendar size={9} style={{ color: COLORS.pinkDeep }} />
                             {new Date(task.deadline).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' })}
@@ -416,26 +448,8 @@
                      )}
                   </div>
 
-                  {/* แถบปุ่มควบคุม (ย้ายมาอยู่บรรทัดเดียวกันด้านล่างสุด) */}
-                  <div className="flex justify-between items-end mt-1.5">
-                     {/* กลุ่มปุ่มควบคุมเวลา */}
-                     <div className="flex gap-1.5">
-                        {isAdmin && (
-                           <>
-                              <button onClick={handleToggleTimer} className="w-[24px] h-[24px] rounded-[6px] flex items-center justify-center bg-white text-[#9673D2] border border-[#CCAAE6]/40 transition-all active:scale-90 shadow-sm" title="Play/Pause">
-                                 {isRunning ? <IconPause size={10} /> : <IconPlay size={10} />}
-                              </button>
-                              <button onClick={handleResetTimer} className="w-[24px] h-[24px] rounded-[6px] flex items-center justify-center bg-white text-[#9673D2] border border-[#CCAAE6]/40 transition-all active:scale-90 shadow-sm" title="Reset">
-                                 <IconRefresh size={10} />
-                              </button>
-                              <button onClick={handleOpenAddModal} className="w-[24px] h-[24px] rounded-[6px] flex items-center justify-center bg-white text-[#9673D2] border border-[#CCAAE6]/40 transition-all active:scale-90 shadow-sm" title="เพิ่มเวลา">
-                                 <IconPlus size={10} />
-                              </button>
-                           </>
-                        )}
-                     </div>
-                     
-                     {/* กลุ่มปุ่มสถานะ */}
+                  {/* แถบปุ่มสถานะ อยู่ด้านล่างสุด */}
+                  <div className="flex justify-end items-end mt-1.5">
                      <div className="flex gap-1.5">
                         {isAdmin ? (
                            <>
@@ -616,6 +630,7 @@
       
       const [searchQuery, setSearchQuery] = useState('');
       const [filterType, setFilterType] = useState('all');
+      const [selectedChannel, setSelectedChannel] = useState('all');
       
       const [isAdmin, setIsAdmin] = useState(false); 
       const [password, setPassword] = useState('');
@@ -825,8 +840,9 @@
       const filteredAllTasks = useMemo(() => tasks.filter(t => {
         const matchSearch = t.type.toLowerCase().includes(searchQuery.toLowerCase()) || t.client.toLowerCase().includes(searchQuery.toLowerCase());
         const matchFilter = filterType === 'all' || (filterType === 'pending' && t.status !== 'done') || (filterType === 'done' && t.status === 'done');
-        return matchSearch && matchFilter;
-      }), [tasks, searchQuery, filterType]);
+        const matchChannel = selectedChannel === 'all' || t.channel === selectedChannel;
+        return matchSearch && matchFilter && matchChannel;
+      }), [tasks, searchQuery, filterType, selectedChannel]);
 
       const displayedTasks = isCalendarView 
         ? filteredAllTasks.filter(t => t.deadline === selectedDate) 
@@ -926,7 +942,20 @@
                       <button onClick={() => setFilterType('done')} className={`flex-1 text-[9px] font-black py-2 rounded-full transition-all tracking-wider ${filterType === 'done' ? 'shadow-sm' : 'text-gray-400'}`} style={{ color: filterType === 'done' ? COLORS.blueDeep : '', backgroundColor: filterType === 'done' ? COLORS.buttonBg : 'transparent' }}>เสร็จแล้ว</button>
                   </div>
 
-                  <div className="flex justify-end mb-4 pr-1">
+                  <div className="flex justify-between items-center mb-4 px-1 gap-2">
+                    <div className="relative">
+                      <select 
+                        value={selectedChannel} 
+                        onChange={(e) => setSelectedChannel(e.target.value)}
+                        className="appearance-none bg-white/80 border-[2px] border-white text-[#9673D2] text-[9px] font-black rounded-full pl-3 pr-6 py-1.5 outline-none shadow-[0_4px_10px_rgba(226,206,243,0.5)] uppercase tracking-widest cursor-pointer backdrop-blur-md transition-all"
+                        style={{ color: COLORS.textMain }}
+                      >
+                        <option value="all">ทุกช่องทาง</option>
+                        {channels.map(ch => <option key={ch} value={ch}>{ch}</option>)}
+                      </select>
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#A788DC] text-[8px]">▼</div>
+                    </div>
+
                     <button onClick={() => { 
                       const newView = !isCalendarView;
                       setIsCalendarView(newView); 
@@ -1142,6 +1171,7 @@
             @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
             @keyframes text-wave { 0%, 20%, 100% { transform: translateY(0px); } 10% { transform: translateY(-5px); } }
             @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            @keyframes spin-very-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
             input[type=number]::-webkit-inner-spin-button, 
             input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
             .animate-text-wave { animation: text-wave 4s ease-in-out infinite; }
@@ -1155,6 +1185,7 @@
             .animate-slideUp { animation: slideUp 0.3s ease-out; }
             .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
             .animate-spin-slow { animation: spin-slow 4s linear infinite; }
+            .animate-spin-very-slow { animation: spin-very-slow 8s linear infinite; }
           `}</style>
         </div>
       );
